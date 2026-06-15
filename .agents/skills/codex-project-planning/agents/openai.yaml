@@ -1,0 +1,3 @@
+interface:
+  display_name: "Codex Project Planning"
+  short_description: "Plan work with belay traces and explicit human gates."

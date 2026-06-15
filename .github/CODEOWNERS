@@ -1,0 +1,9 @@
+* @alloveralls
+/.github/ @alloveralls
+/.agents/ @alloveralls
+/.claude/ @alloveralls
+/.shared/ @alloveralls
+/.belay/ @alloveralls
+/AGENTS.md @alloveralls
+/DESIGN.md @alloveralls
+/TRACE_GUIDE.md @alloveralls
