@@ -50,7 +50,8 @@ belay doctor
 make check
 ```
 
-After creating a repository from this template, initialize its GitHub labels:
+GitHub repository settings are not inherited from a template. After creating a
+repository, initialize its labels and default-branch rulesets:
 
 ```sh
 make github-setup
