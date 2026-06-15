@@ -65,17 +65,40 @@ codex
 claude
 ```
 
-## Initialize GitHub Labels
+The authenticated GitHub account needs repository administration and issue
+management permission. For fine-grained tokens or GitHub Apps, grant
+`Administration: write` and `Issues: write`.
 
-Repositories created from a GitHub template do not inherit custom labels.
-Create or update the labels required by the included issue forms:
+## Initialize GitHub Configuration
+
+Repositories created from a GitHub template do not inherit custom labels or
+rulesets. Create or update the labels and default-branch rulesets:
 
 ```sh
 make github-setup
 ```
 
 The command targets the repository associated with the current checkout. Set
-`GH_REPO=owner/name` to target another repository explicitly.
+`GH_REPO=owner/name` to target another repository explicitly. It creates two
+active rulesets:
+
+- `Protect main`: blocks deletion and force pushes, and requires
+  `markdownlint`, `typos`, and `validate`
+- `Require reviewed PRs`: requires one approval, resolved conversations, and
+  squash merging
+
+When the review ruleset is first created, the authenticated GitHub user
+receives a pull-request-only bypass so a sole maintainer is not locked out.
+Later runs preserve all existing bypass actors. Set
+`GH_RULESET_BYPASS_ACTOR_ID=<numeric-user-id>` to explicitly replace them with
+one pull-request-only user bypass.
+
+The command also enables squash merging, disables merge commits and rebase
+merging, allows pull request branches to be updated, and deletes merged
+branches.
+
+Rulesets for private repositories require a GitHub plan that supports them. If
+the repository will become public, run this command after changing visibility.
 
 ## Initialize Version Control
 
@@ -177,6 +200,7 @@ Run individual checks:
 
 ```sh
 make belay-check
+make github-config-check
 make lint-md
 make typos-check
 ```
@@ -188,8 +212,9 @@ make typos-check
 3. Adjust `AGENTS.md` for project-specific commands and risk rules.
 4. Fill in `DESIGN.md` or remove it if the project has no product/UI concerns.
 5. Add project test, lint, typecheck, and build targets to the Makefile.
-6. Run `belay init --update-agents --install-skill codex`.
-7. Run `make check`.
+6. Update `.github/rulesets/` when changing workflow job names or merge policy.
+7. Run `belay init --update-agents --install-skill codex`.
+8. Run `make check`.
 
 ## Troubleshooting
 

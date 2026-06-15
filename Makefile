@@ -14,15 +14,16 @@ DOC_FILES := $(shell find . \
 		-name 'DESIGN.md' \
 	\) | sort)
 
-.PHONY: help bootstrap github-setup check belay-check docs-check lint-md typos-check
+.PHONY: help bootstrap github-setup check belay-check github-config-check docs-check lint-md typos-check
 
 help:
 	@printf '%s\n' \
 		'Available targets:' \
 		'  make bootstrap    Initialize or refresh belay agent integration' \
-		'  make github-setup Create or update the repository labels' \
+		'  make github-setup Create or update GitHub labels and rulesets' \
 		'  make check        Run belay and documentation checks' \
 		'  make belay-check  Run belay repository health checks' \
+		'  make github-config-check Validate GitHub setup files' \
 		'  make docs-check   Run all documentation checks' \
 		'  make lint-md      Run markdownlint-cli2 on documentation files' \
 		'  make typos-check  Run typos on documentation files' \
@@ -38,9 +39,9 @@ bootstrap:
 	belay init --update-agents --install-skill codex
 
 github-setup:
-	./scripts/setup-github-labels.sh
+	./scripts/setup-github.sh
 
-check: belay-check docs-check
+check: belay-check github-config-check docs-check
 
 belay-check:
 	@command -v belay >/dev/null 2>&1 || { \
@@ -48,6 +49,14 @@ belay-check:
 		exit 1; \
 	}
 	belay doctor
+
+github-config-check:
+	/bin/bash -n scripts/setup-github.sh
+	/bin/bash -n scripts/test-setup-github.sh
+	node -e 'const fs = require("fs"); for (const file of process.argv.slice(1)) JSON.parse(fs.readFileSync(file, "utf8"));' \
+		.github/rulesets/protect-main.json \
+		.github/rulesets/require-reviewed-prs.json
+	./scripts/test-setup-github.sh
 
 docs-check: lint-md typos-check
 
