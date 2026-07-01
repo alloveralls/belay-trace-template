@@ -70,6 +70,25 @@ When the human explicitly approves a plan, set it to `approved`:
 belay status <plan-id> approved
 ```
 
+## Model and Review Budgeting
+
+Use model strength according to task risk.
+
+- Planning, architecture, and tradeoff analysis: prefer high-reasoning models.
+- Routine implementation: prefer medium-reasoning models.
+- Mechanical edits: low-reasoning models are acceptable when the intended
+  change is explicit and localized.
+- Review: prefer high-reasoning models, scoped to `jj diff`, changed files,
+  validation output, and linked belay entries.
+- Cross-model review, such as Codex implementation followed by Claude Code
+  review, is optional and reserved for high-risk, broad, security-sensitive,
+  production-impacting, or architecturally significant changes.
+
+Do not invoke `/subagents` automatically for every implementation. The default
+review path is a focused high-reasoning diff review. Use Codex `/subagents`,
+Claude Code `/agents`, or another external agent only when the change risk
+justifies the additional token and context-transfer cost.
+
 ## Implementation Flow
 
 Start implementation only after explicit human instruction.
@@ -95,8 +114,13 @@ During implementation:
 
 After implementation:
 
-1. Request an independent implementation-time review via Codex `/subagents` or
-   Claude Code `/agents`.
+1. Perform an independent implementation-time review.
+   - Default: run a focused high-reasoning diff review against `jj diff`,
+     changed files, validation results, and linked trace entries.
+   - Use Codex `/subagents`, Claude Code `/agents`, or another external agent
+     only when the change is high-risk, broad, security-sensitive,
+     production-impacting, architecturally significant, or when the implementer
+     cannot confidently review the affected area.
 2. Create a review entry with `belay add review`.
 3. Link the review to the work entry with relation `reviews`.
 4. Address findings or record why they are deferred.
@@ -148,6 +172,9 @@ pull request preparation.
 
 Review entries should include:
 
+- review method, such as `focused-high-review`, `subagent-review`,
+  `cross-model-review`, or `human-review`
+- model budget used for planning, implementation, and review when relevant
 - findings ordered by severity
 - file and line references where applicable
 - risks and recommendations
