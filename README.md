@@ -99,7 +99,7 @@ printf '%s\n' \
   '| ID | Goal item | Outcome / Task | Actor | State | Verification / Evidence |' \
   '| --- | --- | --- | --- | --- | --- |' \
   '| T-1 | SC-1 | Implement observable outcome | AI | not-started | pending |' \
-  '| T-2 | SC-1 | Verify observable outcome | AI | not-started | pending Evidence |' |
+  '| T-2 | SC-1 | Verify observable outcome | AI | not-started | pending Evidence |' \
   belay add plan --title "Plan the change" --stdin
 ```
 
@@ -216,6 +216,35 @@ Use Conventional Commit titles for changes and pull requests.
    ```
 
 6. Run `make check`.
+
+## Updating Existing Projects
+
+Use the updater when an existing repository already based on this template
+should receive the current shared workflow skills without replacing its
+project-specific documentation or GitHub settings:
+
+```sh
+scripts/update-existing-project.sh --check "/path/to/project"
+scripts/update-existing-project.sh "/path/to/project"
+```
+
+The script updates only template-managed workflow skill paths under
+`.shared/skills/`, `.agents/skills/codex-*`, and `.claude/skills/claude-*`.
+It also refreshes belay's managed AGENTS section and installed belay skills by
+running:
+
+```sh
+belay init --update-agents --install-skill codex --install-skill claude
+```
+
+By default, targets without `.belay/config.toml` are rejected. Use
+`--initialize` only when intentionally adopting belay in that repository.
+
+The updater stages and validates the template files before copying them, and it
+preserves unrelated skills. It still applies multiple filesystem updates; if a
+copy fails midway, a target may be partially updated. Run it from a clean
+version-control state and review `jj diff` or `git diff` in the target after
+the command finishes.
 
 ## License
 

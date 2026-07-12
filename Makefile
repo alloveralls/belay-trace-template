@@ -15,7 +15,7 @@ DOC_FILES := $(shell find . \
 		-name 'DESIGN.md' \
 	\) | sort)
 
-.PHONY: help bootstrap github-setup check belay-check skill-check github-config-check docs-check lint-md typos-check
+.PHONY: help bootstrap github-setup check belay-check skill-check updater-check github-config-check docs-check lint-md typos-check
 
 help:
 	@printf '%s\n' \
@@ -25,6 +25,7 @@ help:
 		'  make check        Run belay and documentation checks' \
 		'  make belay-check  Run belay repository health checks' \
 		'  make skill-check  Validate workflow skill wiring' \
+		'  make updater-check Validate existing-project updater' \
 		'  make github-config-check Validate GitHub setup files' \
 		'  make docs-check   Run all documentation checks' \
 		'  make lint-md      Run markdownlint-cli2 on documentation files' \
@@ -43,7 +44,7 @@ bootstrap:
 github-setup:
 	./scripts/setup-github.sh
 
-check: belay-check skill-check github-config-check docs-check
+check: belay-check skill-check updater-check github-config-check docs-check
 
 belay-check:
 	@command -v belay >/dev/null 2>&1 || { \
@@ -62,6 +63,11 @@ skill-check:
 	cmp -s .belay/agent/codex/SKILL.md .agents/skills/belay-trace/SKILL.md
 	cmp -s .belay/agent/claude/SKILL.md .claude/skills/belay-trace/SKILL.md
 	ruby -e 'require "yaml"; {"codex-project-planning"=>"project-planning-workflow","codex-implementation-delivery"=>"implementation-delivery-workflow","codex-decision-review"=>"decision-review-workflow"}.each { |dir, skill| p = ".agents/skills/#{dir}/agents/openai.yaml"; y = YAML.load_file(p); allowed = ["interface"]; extra = y.keys - allowed; abort("#{p}: unexpected top-level keys #{extra.join(", ")}") unless extra.empty?; i = y["interface"] || {}; display = i["display_name"].to_s.strip; short = i["short_description"].to_s.strip; prompt = i["default_prompt"].to_s.strip; abort("#{p}: missing interface.display_name") if display.empty?; abort("#{p}: short_description length #{short.length} outside 25..64") unless (25..64).cover?(short.length); abort("#{p}: missing interface.default_prompt") if prompt.empty?; abort("#{p}: default_prompt must mention $$#{skill}") unless prompt.include?("$$#{skill}") }'
+
+updater-check:
+	/bin/bash -n scripts/update-existing-project.sh
+	/bin/bash -n scripts/test-update-existing-project.sh
+	BELAY_BIN="$$(command -v belay)" ./scripts/test-update-existing-project.sh
 
 github-config-check:
 	/bin/bash -n scripts/setup-github.sh

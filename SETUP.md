@@ -219,10 +219,39 @@ Run individual checks:
 ```sh
 make belay-check
 make skill-check
+make updater-check
 make github-config-check
 make lint-md
 make typos-check
 ```
+
+## Update Existing Template Projects
+
+To apply the current template workflow skills to existing repositories:
+
+```sh
+scripts/update-existing-project.sh --check "/path/with spaces/project"
+scripts/update-existing-project.sh "/path/with spaces/project"
+```
+
+Use `--belay /path/to/belay` to select a specific belay binary. The target must
+already contain `.belay/config.toml` unless `--initialize` is provided.
+
+The updater deliberately does not overwrite project-owned `AGENTS.md` text
+outside belay's managed section, README, SETUP, Makefile, or GitHub
+configuration. It only syncs template-managed workflow skill directories and
+runs:
+
+```sh
+belay init --update-agents --install-skill codex --install-skill claude
+belay doctor
+```
+
+Partial update risk: the script validates staged files before applying them,
+but the final copy still updates several paths. If the process is interrupted
+or the filesystem fails, the target may contain a partial skill update. Run from
+a clean target checkout, keep the target under version control, and inspect the
+target diff after completion.
 
 ## Adapt For A New Project
 
