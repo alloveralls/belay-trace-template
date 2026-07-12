@@ -1,3 +1,4 @@
 interface:
   display_name: "Codex Implementation Delivery"
-  short_description: "Implement with jj, belay traces, review, and PR gates."
+  short_description: "Execute approved Delivery Map work"
+  default_prompt: "Use $implementation-delivery-workflow to implement approved Delivery Map tasks with reconciliation and Evidence."

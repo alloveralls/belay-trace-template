@@ -5,8 +5,8 @@
 - Optimize for resumability, traceability, and safe autonomous execution.
 - Preserve rationale, not only implementation details.
 - Separate facts, assumptions, hypotheses, and conclusions.
-- Use `belay-trace` as the source of truth for plans, decisions, work, reviews,
-  and durable notes.
+- Use `belay-trace` as the source of truth for goals, plans, decisions, work,
+  reviews, evidence, and durable notes.
 - Keep managed Markdown under `.belay/entries/` tracked in version control.
 - Treat `.belay/state/` as local operational state, never as a review artifact.
 
@@ -29,7 +29,13 @@ context.
 
 ## Start Every Task With Context
 
-Before broad historical reads, run:
+Before broad historical reads, prefer:
+
+```sh
+belay context compile "<task>" --format agent --budget 4000
+```
+
+If `compile` is unavailable, run:
 
 ```sh
 belay context "<task>" --format agent --budget 2500
@@ -52,14 +58,21 @@ an issue, or compare approaches.
 
 During planning:
 
-1. Retrieve related context with `belay context`.
-2. Clarify scope, non-scope, risks, dependencies, and acceptance criteria.
-3. Create a plan entry with `belay add plan`.
-4. Create decision entries with `belay add decision` when meaningful tradeoffs
+1. Retrieve related context with `belay context compile`.
+2. Classify the work as Tier 1, Tier 2, or Tier 3.
+3. For Tier 2 and Tier 3, create or update a Goal and Plan before
+   implementation.
+4. Add an Intent Brief with Problem, Desired Outcome, Success Signals,
+   Constraints, Non-goals, Assumptions, and Unknowns / Decisions Needed.
+5. Add a Delivery Map with stable Task IDs, observable outcome tasks, and
+   verification tasks.
+6. Keep `implemented` and `verified` separate.
+7. Create decision entries with `belay add decision` when meaningful tradeoffs
    or contracts are established.
-5. Link decisions to the plan with `belay link`.
-6. Draft requested issue content without creating the actual issue.
-7. Stop at the relevant human gate.
+8. Link related entries with `fulfills`, `supports`, or `references`.
+9. Run `belay goal lint <goal-id>` for new or materially changed Goals.
+10. Draft requested issue content without creating the actual issue.
+11. Stop at the relevant human gate.
 
 Planning does not authorize source changes, `jj new`, issue creation, pull
 request creation, or merge execution.
@@ -68,6 +81,18 @@ When the human explicitly approves a plan, set it to `approved`:
 
 ```sh
 belay status <plan-id> approved
+```
+
+Record approval as Evidence when the approval scope matters:
+
+```sh
+belay verify record \
+  --kind human-approval \
+  --verdict pass \
+  --source "<message-or-url>" \
+  --issuer "<actor>" \
+  --summary "<approved scope>" \
+  --verifies <plan-id>
 ```
 
 ## Model and Review Budgeting
@@ -95,22 +120,28 @@ Start implementation only after explicit human instruction.
 
 Before implementation:
 
-1. Retrieve the task context and inspect linked plans, decisions, reviews, and
-   issues.
+1. Retrieve the task context and inspect linked Goals, Plans, Delivery Maps,
+   decisions, reviews, evidence, and issues.
 2. Run `belay sync` and resolve any drift without overwriting conflicts.
 3. Create a new change with `jj new`.
 4. Create a work entry with `belay add work`.
-5. Link the work entry to its plan and decisions using `implements` or
-   `references`.
+5. Link the work entry to its Goal item or Goal using `fulfills`.
 
 During implementation:
 
-- keep the work entry current with progress, changed files, validation,
-  blockers, observations, assumptions, and hypotheses
+- keep the Work entry and Delivery Map current with progress, changed files,
+  validation, blockers, observations, assumptions, hypotheses, and Task states
+- use stable Delivery Map Task IDs as the active work units
+- mark a task `implemented` only when the change exists
+- mark a task `verified` only after passing Evidence checks the mapped outcome
 - run `belay sync` after directly editing managed Markdown
 - create new decision entries when implementation establishes a meaningful
   architectural, API, operational, or tradeoff decision
 - validate with the project's test, lint, typecheck, and build commands
+- record durable validation with `belay verify record` when it supports Goal
+  coverage or release decisions
+- reconcile Intent Brief, Goal, Delivery Map, actual diff, and Evidence at
+  meaningful checkpoints and before completion
 
 After implementation:
 
@@ -124,8 +155,9 @@ After implementation:
 2. Create a review entry with `belay add review`.
 3. Link the review to the work entry with relation `reviews`.
 4. Address findings or record why they are deferred.
-5. Set completed review and work entries to `completed`.
-6. Run `belay sync` and `belay doctor`.
+5. Set completed Review and Work entries to `completed`.
+6. Run `belay sync`, `belay doctor`, and `belay coverage` when Goals are
+   active.
 7. Prepare or create a pull request only when explicitly instructed.
 
 ## Trace Entry Guidance
@@ -137,14 +169,17 @@ Use these entry types:
 
 | Type | Purpose |
 |---|---|
+| `goal` | Durable desired outcome, success criteria, constraints, and non-goals. |
 | `plan` | Scope, approach, risks, and acceptance criteria. |
 | `decision` | A concrete decision and its rationale or tradeoffs. |
 | `work` | Implementation progress, evidence, blockers, and validation. |
 | `review` | Findings, risks, recommendations, and review outcome. |
+| `evidence` | Append-only verification records stored under `.belay/evidence/`. |
 | `note` | Durable context that does not fit another entry type. |
 
-Use display IDs in commands and cross-references. Prefer explicit links over
-duplicated narrative.
+Use display IDs in commands and cross-references. Prefer explicit links such as
+`fulfills`, `supports`, `verifies`, `reviews`, `implements`, and `references`
+over duplicated narrative.
 
 ## Decision Rules
 
@@ -205,9 +240,34 @@ belay sync --prefer markdown <entry-id>
 belay sync --prefer sqlite <entry-id>
 ```
 
-Deletion does not propagate in belay v1. Use a terminal status such as
+Deletion does not propagate through normal sync. Use a terminal status such as
 `abandoned`, `rejected`, `superseded`, or `archived` instead of deleting trace
 history.
+
+## Fixed Status Report
+
+When reporting checkpoint status for Tier 2 or Tier 3 work, use this shape and
+keep it consistent with the Delivery Map:
+
+```text
+Current state
+- verified: <n>/<total>
+- implemented, unverified: <n>/<total>
+- in progress: <n>/<total>
+- blocked: <n>/<total>
+
+Goal coverage
+- <criterion>: <verified|partial|not started>
+
+Changed assumptions
+- <change or None identified>
+
+Human decisions needed
+- <decision or None identified>
+
+Next action
+- <single next action>
+```
 
 ## Version Control
 
@@ -248,6 +308,7 @@ Before handing off completed implementation:
 ```sh
 belay sync
 belay doctor
+belay coverage
 jj st
 jj diff
 ```
@@ -257,10 +318,39 @@ Record the validation outcome in the work and review entries.
 <!-- belay-trace:start -->
 ## belay-trace
 
+### Workflow tiers
+
+- Tier 1 (small, reversible changes): a direct user instruction is sufficient approval. Keep the change focused; a separate Plan, Decision, and Review entry is optional.
+- Tier 2 (features and non-trivial changes): create or update a Goal/Plan before implementation. The Plan must contain an Intent Brief and Delivery Map; give the human an opportunity to correct the Brief before implementation. Record Work and review the completed diff in a fresh context.
+- Tier 3 (architecture, API contracts, security, migrations, or irreversible operations): use the Tier 2 trace plus explicit human approval of the Intent Brief and Plan before implementation. Record material Decisions and use an independent reviewer in a fresh context. Prefer cross-model review when its added cost is justified by the risk.
+- Escalate a change to the higher tier whenever scope, reversibility, or risk is uncertain. Do not create trace entries that add no durable decision, evidence, or retrieval value.
+
+### Delivery assurance for Tier 2 and Tier 3
+
+- Frame intent in the Plan before implementation with these non-empty Intent Brief sections: Problem, Desired Outcome, Success Signals, Constraints, Non-goals, Assumptions, and Unknowns / Decisions Needed. Write `None identified` when a section has no items.
+- Label uncertain statements as assumptions or unknowns. Ask about decisions that materially change the outcome, security, data loss, external commitments, or irreversible work; proceed with explicitly recorded, small, reversible assumptions.
+- Map every Goal Success Criterion to observable outcome and verification tasks in a Delivery Map. Keep Task IDs stable and use only `not-started`, `in-progress`, `blocked`, `implemented`, `verified`, or `dropped`.
+- Treat `implemented` and `verified` as different states. Passing Evidence is required for `verified`; a code change or test definition alone is not verification. Preserve the reason and approval source for every `dropped` task.
+- Reconcile the Intent Brief, Goal, Delivery Map, actual diff, and Evidence after a meaningful task, a discovered requirement or risk, a scope or design change, before interruption or handoff, when asked for status, and before declaring completion.
+- At each reconciliation, report: Current state counts; Goal coverage; Changed assumptions; Human decisions needed; Next action. Update the Delivery Map instead of reporting a state that it does not contain.
+- Before completion, use a fresh context to check every Success Criterion has a task and valid Evidence, no blocked or implemented-only item is treated as complete, the diff respects Constraints and Non-goals, and changed scope or dropped tasks have approval. Record human acceptance for the final outcome.
+
+### Trace and approval
+
 - Run `belay context "<task>" --format agent --budget 2500` before broad historical log reads.
+- Prefer `belay context compile "<task>" --format agent --budget 4000` at task start when available.
+- Search for related Goals before creating Work or Decision entries; link Work/Decision to Goals with `fulfills`.
+- Run `belay goal lint <goal-id>` after drafting or materially editing a Goal.
+- Record validation with `belay verify record` and inspect coverage with `belay coverage` before release decisions.
 - Use `belay search "<query>"` for targeted discovery and `belay show <id>` only when a full entry is needed.
-- Use `belay add`, `belay link`, and `belay status` for trace updates.
+- Use `belay add`, `belay link`, and `belay status <id> <status>` for trace updates.
+- Before marking a Plan approved, preserve who approved it, when, and the source message or URL. Prefer append-only Evidence with `belay verify record --kind human-approval --verdict pass --issuer "<actor>" --source "<message-or-url>" --summary "<scope>" --verifies <plan-id>`.
 - Run `belay sync` after direct managed Markdown edits.
 - Never overwrite an unresolved sync conflict. Inspect it and use an explicit `belay sync --prefer markdown <id>` or `belay sync --prefer sqlite <id>` only after the intended source of truth is known.
 - Do not scan `.belay/entries/` broadly unless a specific source path is required.
+
+### Review and documentation boundaries
+
+- Independent review requires context separation: use a fresh sub-agent or session that did not implement the change. Higher reasoning effort in the implementation context is not independent review.
+- Keep durable system documentation in `docs/`. Use Goal, Plan, Decision, Work, and Review entries for intent, history, trade-offs, execution, and evidence; link to durable docs instead of duplicating them.
 <!-- belay-trace:end -->

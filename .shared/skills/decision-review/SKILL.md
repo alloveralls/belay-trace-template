@@ -1,49 +1,71 @@
 ---
 name: decision-review-workflow
-description: Record decisions and implementation reviews as linked belay traces with explicit risks and outcomes.
+description: Use for recording material Decisions and reviewing completion with fresh context, Evidence, risk escalation, and human acceptance checks.
 ---
 
 # Decision Review Workflow
 
+## Purpose
+
+Use this skill to record material Decisions and to review whether completed work
+actually satisfies the Intent Brief, Goal, Delivery Map, diff, and Evidence. It
+owns Decision quality and Assure completion. It does not own initial planning or
+implementation execution.
+
 ## Guardrails
 
 - Treat `AGENTS.md` as canonical.
-- Retrieve history with `belay context` before broad reads.
-- Use `belay add`, `belay link`, and `belay status` for trace updates.
-- Separate facts, assumptions, hypotheses, and conclusions.
+- Retrieve history with belay before broad reads.
+- Use `belay add`, `belay link`, `belay status`, and `belay verify record` for
+  trace updates.
+- Separate facts, assumptions, unknowns, opinions, and human decisions.
 - Human review supplements independent agent review; it does not replace it.
 
 ## Retrieve Context
 
+For decision work:
+
 ```sh
-belay context "<decision or review task>" --format agent --budget 2500
+belay context compile "<decision task>" --profile goal-drafting --budget 4000
 ```
 
-Use `belay search` and `belay show` only as needed.
+For review or completion assurance:
+
+```sh
+belay context compile "<review task>" --profile review --budget 4000
+```
+
+If `compile` is unavailable, use `belay context "<task>" --format agent --budget 2500`.
 
 ## Decision Rules
 
-Create or update a decision entry when:
+Create or update a Decision entry when:
 
 - architecture changes
 - API contracts change
 - operational rules change
+- security, migration, or production behavior changes
 - a significant tradeoff justifies a refactor
 - a temporary decision is introduced
 - a review identifies a systemic issue
 - a previous decision is rejected or superseded
 
-Follow the decision body guidance in `TRACE_GUIDE.md`. A meaningful decision
-should state:
+A meaningful Decision should state:
 
 - context and concrete decision
 - alternatives and rationale
-- assumptions
+- assumptions and unknowns
 - positive and negative consequences
 - risks and mitigations
 - rollback strategy
 - validation and success criteria
 - re-evaluation trigger when temporary
+
+Link Decisions to the relevant Goal or Plan:
+
+```sh
+belay link <decision-id> <goal-id-or-plan-id> --relation supports
+```
 
 Use `accepted` only when the decision is adopted. Use `rejected` when it is not
 adopted.
@@ -60,30 +82,55 @@ belay status <new-decision-id> accepted
 
 Record what changed and why the old rationale no longer applies.
 
-## Implementation Review
+## Fresh-Context Completion Assurance
 
-Every implementation requires an independent review entry.
+Completion assurance must use context separation. A reviewer should inspect the
+Intent Brief, Goal, Delivery Map, actual diff, Work entry, Decisions, and
+Evidence without relying on the implementer's working memory.
 
-1. Review the change diff, linked work entry, linked plan and decisions, and the
-   minimum additional source context needed.
-2. Put findings first and order them by severity.
-3. Include file and line references where applicable.
-4. Record immediate and long-term risks.
-5. Record recommendations, positive findings, validation, and follow-up owners.
-6. Create the review entry with `belay add review`.
-7. Link it to the work:
+Do not declare the Goal complete until:
 
-   ```sh
-   belay link <review-id> <work-id> --relation reviews
-   ```
+- every Success Criterion has mapped delivery tasks
+- every required task is `verified` or explicitly `dropped`
+- dropped tasks preserve reason and approval source
+- no `implemented`, `blocked`, or important unknown item is counted as complete
+- Evidence actually checks the mapped outcome
+- the diff respects Constraints and Non-goals
+- changed scope or assumptions are recorded
+- final human acceptance is recorded when required by the tier or risk
 
-8. Keep the review `pending` until required findings are addressed or explicitly
-   deferred.
-9. Set it to `completed` when the review outcome is recorded.
+Use `belay coverage` and `belay verify status <id>` where useful, but do not
+treat coverage numbers as a substitute for semantic review.
+
+## Review Entry
+
+Every non-trivial implementation needs a Review entry before pull request
+preparation. Findings should lead, ordered by severity.
+
+Include:
+
+- review method, such as `focused-high-review`, `subagent-review`,
+  `cross-model-review`, or `human-review`
+- related Goal, Plan, Work, Decision, Evidence, and diff references
+- findings with file and line references where applicable
+- risks and recommendations
+- validation reviewed
+- positive findings
+- follow-up actions and owners
+- whether human review is additionally required
+
+Link review to Work:
+
+```sh
+belay link <review-id> <work-id> --relation reviews
+```
+
+Keep the Review `pending` until required findings are addressed or explicitly
+deferred. Set it to `completed` when the outcome is recorded.
 
 ## Human Review Escalation
 
-Set `requires_human_review: true` in the review body when:
+Set `requires_human_review: true` in the Review body when:
 
 - security implications exist
 - production impact is uncertain
@@ -91,6 +138,7 @@ Set `requires_human_review: true` in the review body when:
 - assumptions cannot be validated
 - rollback strategy is unclear
 - product scope or customer-facing behavior changes
+- final acceptance is required by Tier 3 or by project policy
 
 ## Direct Entry Edits
 

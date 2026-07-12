@@ -1,3 +1,4 @@
 interface:
   display_name: "Codex Project Planning"
-  short_description: "Plan work with belay traces and explicit human gates."
+  short_description: "Frame Goals and Delivery Maps"
+  default_prompt: "Use $project-planning-workflow to frame a Goal, Intent Brief, and Delivery Map before implementation."

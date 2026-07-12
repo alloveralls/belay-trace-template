@@ -13,7 +13,8 @@ This is a workflow starter kit, not an application framework.
 ## What This Template Provides
 
 - Repository-local agent policy in [AGENTS.md](./AGENTS.md).
-- Plans, decisions, work, reviews, and notes managed by `belay`.
+- Goals, plans, decisions, work, reviews, evidence, and notes managed by
+  `belay`.
 - Tracked review and recovery files under `.belay/entries/`.
 - Local searchable state under `.belay/state/`.
 - Shared planning, implementation, and review skills for Codex and Claude Code.
@@ -29,7 +30,8 @@ This is a workflow starter kit, not an application framework.
 | [AGENTS.md](./AGENTS.md) | Canonical workflow and safety rules. |
 | [TRACE_GUIDE.md](./TRACE_GUIDE.md) | Entry body, status, relation, and lifecycle guidance. |
 | [.belay/config.toml](./.belay/config.toml) | belay repository configuration. |
-| `.belay/entries/` | Tracked Markdown trace surface. |
+| `.belay/entries/` | Tracked Markdown trace surface, including Goals and Plans. |
+| `.belay/evidence/` | Tracked append-only verification evidence. |
 | `.belay/state/` | Ignored local SQLite operational state. |
 | `.belay/agent/` | Generated integration assets. |
 | `.shared/skills/` | Shared workflow skills. |
@@ -60,25 +62,52 @@ make github-setup
 Start a task by retrieving bounded, source-attributed context:
 
 ```sh
-belay context "describe the task" --format agent --budget 2500
+belay context compile "describe the task" --format agent --budget 4000
 ```
 
-Create a planning trace:
+Create a Goal and planning trace:
 
 ```sh
+belay add goal --title "Deliver the change"
+
 printf '%s\n' \
-  '## Objective' \
-  'Describe the intended outcome.' \
+  '## Intent Brief' \
   '' \
-  '## Acceptance Criteria' \
-  '- Define a verifiable completion condition.' |
+  '### Problem' \
+  '- Describe the problem.' \
+  '' \
+  '### Desired Outcome' \
+  '- Describe the intended outcome.' \
+  '' \
+  '### Success Signals' \
+  '- Observable success signal.' \
+  '' \
+  '### Constraints' \
+  '- None identified' \
+  '' \
+  '### Non-goals' \
+  '- None identified' \
+  '' \
+  '### Assumptions' \
+  '- None identified' \
+  '' \
+  '### Unknowns / Decisions Needed' \
+  '- None identified' \
+  '' \
+  '## Delivery Map' \
+  '' \
+  '| ID | Goal item | Outcome / Task | Actor | State | Verification / Evidence |' \
+  '| --- | --- | --- | --- | --- | --- |' \
+  '| T-1 | SC-1 | Implement observable outcome | AI | not-started | pending |' \
+  '| T-2 | SC-1 | Verify observable outcome | AI | not-started | pending Evidence |' |
   belay add plan --title "Plan the change" --stdin
 ```
 
 The command prints a display ID such as:
 
 ```text
-PLN-20260615T090000-001-plan-the-change
+GOAL-20260712T090000-001-deliver-the-change
+PLN-20260712T090100-001-plan-the-change
 ```
 
 Use display IDs to connect the trace:
@@ -88,7 +117,8 @@ belay add decision \
   --title "Choose the implementation approach" \
   --body "## Decision\nUse the smallest compatible approach."
 
-belay link <decision-id> <plan-id> --relation references
+belay link <plan-id> <goal-id> --relation fulfills
+belay link <decision-id> <goal-id> --relation supports
 belay status <plan-id> approved
 ```
 
@@ -96,20 +126,23 @@ belay status <plan-id> approved
 
 The workflow is human-gated:
 
-1. Planning: create and link plan and decision entries.
+1. Planning: create and link Goal, Plan, and Decision entries.
 2. Approval: the human explicitly approves implementation.
-3. Implementation: create a `jj` change and a work entry.
-4. Validation: record tests, lint, typecheck, and build evidence.
-5. Review: an independent agent creates a linked review entry.
-6. Delivery: prepare or create a PR only after explicit approval.
-7. Merge: execute only after explicit human instruction and green CI.
+3. Implementation: create a `jj` change and a Work entry.
+4. Reconciliation: update Delivery Map states at checkpoints.
+5. Validation: record tests, lint, typecheck, build, and Evidence.
+6. Review: an independent agent creates a linked Review entry.
+7. Delivery: prepare or create a PR only after explicit approval.
+8. Merge: execute only after explicit human instruction and green CI.
 
 Meaningful work should be traceable:
 
 ```text
-Plan
+Goal
+  -> Plan
   -> Decision
   -> Work
+  -> Evidence
   -> Review
   -> Validation
 ```
@@ -123,6 +156,7 @@ relevant context:
 
 ```sh
 belay context "implement repository sync" --format agent --budget 2500
+belay context compile "implement repository sync" --profile task-start --budget 4000
 belay search "repository sync"
 belay show <entry-id>
 ```
@@ -178,7 +212,7 @@ Use Conventional Commit titles for changes and pull requests.
 5. Keep belay's marker-scoped AGENTS section and generated skill current with:
 
    ```sh
-   belay init --update-agents --install-skill codex
+   belay init --update-agents --install-skill codex --install-skill claude
    ```
 
 6. Run `make check`.

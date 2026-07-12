@@ -1,97 +1,141 @@
 ---
 name: implementation-delivery-workflow
-description: Implement approved work with jj, belay work traces, validation, independent review, and delivery gates.
+description: Use for implementing approved work with jj, belay Work entries, stable Delivery Map Task IDs, checkpoint reconciliation, and validation Evidence.
 ---
 
 # Implementation Delivery Workflow
 
+## Purpose
+
+Use this skill after explicit implementation approval. It owns Execute and
+checkpoint Reconcile. It does not own initial planning or final independent
+completion assurance.
+
 ## Entry Gate
 
 Start implementation only after explicit human instruction. Planning approval
-or issue creation alone does not authorize source changes.
+or issue creation approval alone does not authorize source changes.
 
-Treat `AGENTS.md` as canonical. Use `jj` for version control and belay for trace
-history.
+Before touching source code:
 
-## Retrieve And Reconcile
+```sh
+jj new
+```
+
+If a human explicitly instructs you to skip `jj new`, record the exception and
+reason in the Work entry before continuing.
+
+## Retrieve And Reconcile Before Work
 
 1. Run:
 
    ```sh
-   belay context "<implementation task>" --format agent --budget 2500
+   belay context compile "<implementation task>" --format agent --budget 4000
    ```
 
-2. Inspect the relevant plan, decisions, reviews, and issue.
+   If unavailable, use `belay context "<implementation task>" --format agent --budget 2500`.
+
+2. Inspect the approved Goal, Plan, Delivery Map, Decisions, Reviews, Evidence,
+   and issue.
 3. Run `belay sync`.
-4. Resolve drift without overwriting an unresolved conflict.
+4. Resolve drift without overwriting unresolved conflicts.
+5. Confirm every active work item has a stable Delivery Map Task ID.
 
-## Implementation Flow
+## Execute
 
-1. Set the approved plan to `active`.
-2. Create a new implementation change:
-
-   ```sh
-   jj new
-   ```
-
-3. Create a work entry using the body guidance in `TRACE_GUIDE.md`.
-4. Record the active `jj` change ID in the work entry.
-5. Link work to the approved plan and decisions:
+1. Set the approved Plan to `active` when applicable.
+2. Create a Work entry using the body guidance in `TRACE_GUIDE.md`.
+3. Record the active `jj` change ID in the Work entry.
+4. Link Work to the Goal item or Goal:
 
    ```sh
-   belay link <work-id> <plan-id> --relation implements
-   belay link <work-id> <decision-id> --relation implements
+   belay link <work-id> <goal-id-or-goal-fragment> --relation fulfills
    ```
 
-6. Implement the smallest coherent change.
-7. Keep the work entry current with:
-   - progress
-   - changed files
-   - commands and validation results
-   - observations
-   - assumptions and hypotheses
-   - blockers and next steps
-8. Create and link new decision entries when implementation establishes a
-   meaningful tradeoff or contract.
-9. Run project test, lint, typecheck, and build commands where available.
-10. Request an independent implementation-time review through Codex
-    `/subagents` or Claude Code `/agents`.
-11. Create a review entry and link it:
+5. Use the Delivery Map Task ID as the active work unit.
+6. Move a task to `implemented` only when the intended change exists.
+7. Move a task to `verified` only after passing Evidence checks the mapped
+   outcome.
+8. Record validation with `belay verify record` when the result should support
+   release or Goal coverage decisions.
+9. Add newly discovered tasks, assumptions, unknowns, constraints, and scope
+   changes to the Plan instead of silently absorbing them.
+10. Create Decision entries for meaningful implementation tradeoffs.
 
-    ```sh
-    belay link <review-id> <work-id> --relation reviews
-    ```
+## Checkpoint Reconciliation
 
-12. Address findings or document why they are deferred.
-13. Set the review and work entries to `completed`.
-14. Set the plan to `completed` when its acceptance criteria are met.
-15. Run:
+Reconcile the Intent Brief, Goal, Delivery Map, actual diff, and Evidence at
+these checkpoints:
 
-    ```sh
-    belay sync
-    belay doctor
-    jj st
-    jj diff
-    ```
+- after a meaningful task
+- after discovering a requirement, constraint, risk, or changed assumption
+- after changing design or scope
+- before interruption, compaction, or handoff
+- when asked for status
+- before claiming implementation is done
 
-16. Set the change description with a Conventional Commit message.
-17. Push or create a pull request only when explicitly authorized.
+Use this fixed status report and make it match the Delivery Map:
 
-## Work Status
+```text
+Current state
+- verified: <n>/<total>
+- implemented, unverified: <n>/<total>
+- in progress: <n>/<total>
+- blocked: <n>/<total>
 
-- `in-progress`: active implementation
-- `blocked`: progress cannot continue
-- `completed`: implementation and required review are complete
-- `abandoned`: the implementation will not continue
+Goal coverage
+- <criterion>: <verified|partial|not started>
 
-Return blocked work to `in-progress` when the blocker clears.
+Changed assumptions
+- <change or None identified>
 
-## Pull Request Gate
+Human decisions needed
+- <decision or None identified>
 
-Creating a pull request requires explicit human instruction. If authorization is
-absent, prepare a PR title and body draft, then stop.
+Next action
+- <single next action>
+```
 
-Never merge without explicit human instruction and green CI.
+Do not report a task as complete when it is only `implemented`.
+
+## Validation
+
+Run the project's test, lint, typecheck, and build commands where available.
+Record each command and result in the Work entry.
+
+For durable Evidence:
+
+```sh
+belay verify record \
+  --kind test \
+  --verdict pass \
+  --source "<command>" \
+  --summary "<what passed>" \
+  --verifies <goal-id-or-work-id>
+```
+
+Use `belay coverage` before release decisions when Goals are active.
+
+## Delivery Gate
+
+After implementation:
+
+1. Run `belay sync`.
+2. Run `belay doctor`.
+3. Run `jj st` and `jj diff`.
+4. Ensure the Delivery Map has no blocked or implemented-only item represented
+   as complete.
+5. Request independent completion assurance or review according to risk.
+6. Create or update a Review entry only after the review has actual findings or
+   an explicit no-finding outcome.
+7. Push or create a pull request only when explicitly authorized.
+
+## Review Budgeting
+
+The default review path is a focused high-reasoning diff review. Use Codex
+`/subagents`, Claude Code `/agents`, or cross-model review only when risk,
+scope, security, production impact, architecture, or uncertainty justifies the
+cost.
 
 ## Conflict Safety
 

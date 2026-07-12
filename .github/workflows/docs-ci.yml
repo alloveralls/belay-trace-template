@@ -13,12 +13,22 @@ on:
       - ".github/**/*.md"
       - ".shared/skills/**/*.md"
       - ".agents/skills/belay-trace/SKILL.md"
+      - ".claude/skills/belay-trace/SKILL.md"
       - ".belay/agent/**/*.md"
+      - ".agents/skills/**/agents/openai.yaml"
       - ".github/.markdownlint.json"
       - ".github/.typos.toml"
       - ".github/workflows/docs-ci.yml"
 
 jobs:
+  skill-check:
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - run: make skill-check
+
   markdownlint:
     permissions:
       contents: read
@@ -38,6 +48,7 @@ jobs:
             .github/**/*.md
             .shared/skills/**/*.md
             .agents/skills/belay-trace/SKILL.md
+            .claude/skills/belay-trace/SKILL.md
             .belay/agent/**/*.md
 
   typos:
@@ -58,4 +69,5 @@ jobs:
             .github/*.md
             .shared/skills/**/*.md
             .agents/skills/belay-trace/SKILL.md
+            .claude/skills/belay-trace/SKILL.md
             .belay/agent/**/*.md

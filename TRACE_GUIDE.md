@@ -8,6 +8,7 @@ more detail.
 
 | Type | Default | Allowed statuses |
 |---|---|---|
+| `goal` | `draft` | `draft`, `active`, `completed`, `superseded`, `abandoned` |
 | `plan` | `draft` | `draft`, `approved`, `active`, `completed`, `superseded`, `abandoned` |
 | `decision` | `proposed` | `proposed`, `accepted`, `rejected`, `superseded` |
 | `work` | `in-progress` | `in-progress`, `blocked`, `completed`, `abandoned` |
@@ -25,41 +26,102 @@ Use terminal statuses instead of deleting history.
 | `reviews` | A review entry evaluates a work entry. |
 | `supersedes` | A newer decision or plan replaces an older one. |
 | `follows-up` | An entry records later work caused by another entry. |
+| `fulfills` | Work or Plan satisfies a Goal or Goal item. |
+| `supports` | Decision or Evidence supports a Goal, Plan, or Work item. |
+| `verifies` | Evidence verifies a Goal, Goal item, Plan, or Work item. |
+| `refutes` | Evidence contradicts an expected outcome. |
 
 Example:
 
 ```sh
-belay link <work-id> <plan-id> --relation implements
-belay link <work-id> <decision-id> --relation implements
+belay link <plan-id> <goal-id> --relation fulfills
+belay link <work-id> <goal-id-or-goal-fragment> --relation fulfills
+belay link <decision-id> <goal-id> --relation supports
 belay link <review-id> <work-id> --relation reviews
+```
+
+## Goal Body
+
+`belay add goal --title "<title>"` can create the required Goal sections as a
+template. Fill them before relying on the Goal for planning.
+
+Recommended sections:
+
+```markdown
+## Problem
+
+What is wrong or missing today.
+
+## Desired Outcome
+
+The durable state that should become true.
+
+## Success Criteria
+
+- SC-1: Observable success criterion.
+
+## Constraints
+
+- Constraint that the solution must respect.
+
+## Non-goals
+
+- Explicitly excluded outcome.
+
+## Assumptions
+
+- Assumption that should be revisited if evidence changes.
+
+## Unknowns
+
+- Unknown or human decision still needed.
+```
+
+Run:
+
+```sh
+belay goal lint <goal-id>
 ```
 
 ## Plan Body
 
 ```markdown
-## Objective
+## Intent Brief
 
-Describe the intended outcome.
+### Problem
 
-## Facts
+- Describe the problem.
 
-- Verified repository or product facts.
+### Desired Outcome
 
-## Assumptions
+- Describe the intended outcome.
 
-- Unverified assumptions that affect the plan.
+### Success Signals
 
-## Scope
+- Observable signal.
 
-- Included work.
+### Constraints
 
-## Non-Scope
+- Constraint.
 
-- Explicitly excluded work.
+### Non-goals
 
-## Approach
+- Excluded outcome.
 
-1. Proposed implementation steps.
+### Assumptions
+
+- Assumption.
+
+### Unknowns / Decisions Needed
+
+- Unknown or `None identified`.
+
+## Delivery Map
+
+| ID | Goal item | Outcome / Task | Actor | State | Verification / Evidence |
+| --- | --- | --- | --- | --- | --- |
+| T-1 | SC-1 | Implement observable outcome | AI | not-started | pending |
+| T-2 | SC-1 | Verify observable outcome | AI | not-started | pending Evidence |
 
 ## Risks And Mitigations
 
@@ -69,11 +131,11 @@ Describe the intended outcome.
 ## Acceptance Criteria
 
 - [ ] Verifiable completion condition.
-
-## Open Questions
-
-- None.
 ```
+
+Delivery Map states are limited to `not-started`, `in-progress`, `blocked`,
+`implemented`, `verified`, and `dropped`. Treat `implemented` and `verified` as
+different states.
 
 Lifecycle:
 
@@ -147,6 +209,8 @@ Describe the approved implementation task.
 ## Related Context
 
 - Plan: `<plan-id>`
+- Goal: `<goal-id>`
+- Delivery Map task: `T-n`
 - Decisions: `<decision-id>`
 - Issue: `<url-or-number>`
 - jj change: `<change-id>`
@@ -163,6 +227,7 @@ Describe the approved implementation task.
 
 - Command: `<command>`
   Result: pass, fail, or not run with reason.
+- Evidence: `<evidence-id-or-source>`
 
 ## Observations
 
@@ -242,6 +307,22 @@ reason: none
 ```
 
 Review findings should include file and line references where applicable.
+
+## Evidence
+
+Record durable verification with:
+
+```sh
+belay verify record \
+  --kind test \
+  --verdict pass \
+  --source "<command>" \
+  --summary "<what passed>" \
+  --verifies <goal-id-or-work-id>
+```
+
+Use `belay coverage` to inspect Goal coverage. Coverage is supporting evidence,
+not a replacement for semantic review.
 
 ## Note Body
 

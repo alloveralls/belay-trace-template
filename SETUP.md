@@ -43,7 +43,8 @@ mise use --global github:jj-vcs/jj@latest
 mise use --global npm:@anthropic-ai/claude-code@latest
 mise use --global npm:@openai/codex@latest
 mise use --global npm:markdownlint-cli2@latest
-brew install gh typos
+mise use --global typos@latest
+brew install gh
 ```
 
 Verify:
@@ -134,6 +135,7 @@ The command:
 - creates local SQLite state
 - updates only the marker-scoped belay section in `AGENTS.md`
 - installs the generic Codex skill at `.agents/skills/belay-trace/SKILL.md`
+- installs the generic Claude skill at `.claude/skills/belay-trace/SKILL.md`
 
 Verify:
 
@@ -155,14 +157,23 @@ Then retrieve relevant history:
 belay context "<task>" --format agent --budget 2500
 ```
 
+For belay 0.2.0, prefer the compiled context form at task start:
+
+```sh
+belay context compile "<task>" --format agent --budget 4000
+```
+
 ## Normal Task Lifecycle
 
 Planning:
 
 ```sh
+belay add goal --title "<title>"
 belay add plan --title "<title>" --body-file <plan-body.md>
+belay goal lint <goal-id>
 belay add decision --title "<title>" --body-file <decision-body.md>
-belay link <decision-id> <plan-id> --relation references
+belay link <plan-id> <goal-id> --relation fulfills
+belay link <decision-id> <goal-id> --relation supports
 ```
 
 After explicit implementation approval:
@@ -171,7 +182,7 @@ After explicit implementation approval:
 belay status <plan-id> approved
 jj new
 belay add work --title "<title>" --body-file <work-body.md>
-belay link <work-id> <plan-id> --relation implements
+belay link <work-id> <goal-id-or-goal-fragment> --relation fulfills
 ```
 
 After implementation and independent review:
@@ -179,6 +190,13 @@ After implementation and independent review:
 ```sh
 belay add review --title "<title>" --body-file <review-body.md>
 belay link <review-id> <work-id> --relation reviews
+belay verify record \
+  --kind test \
+  --verdict pass \
+  --source "<command>" \
+  --summary "<what passed>" \
+  --verifies <goal-id-or-work-id>
+belay coverage
 belay status <review-id> completed
 belay status <work-id> completed
 belay sync
@@ -200,6 +218,7 @@ Run individual checks:
 
 ```sh
 make belay-check
+make skill-check
 make github-config-check
 make lint-md
 make typos-check
@@ -213,7 +232,7 @@ make typos-check
 4. Fill in `DESIGN.md` or remove it if the project has no product/UI concerns.
 5. Add project test, lint, typecheck, and build targets to the Makefile.
 6. Update `.github/rulesets/` when changing workflow job names or merge policy.
-7. Run `belay init --update-agents --install-skill codex`.
+7. Run `belay init --update-agents --install-skill codex --install-skill claude`.
 8. Run `make check`.
 
 ## Troubleshooting
@@ -223,7 +242,7 @@ make typos-check
 Run:
 
 ```sh
-belay init --update-agents --install-skill codex
+belay init --update-agents --install-skill codex --install-skill claude
 ```
 
 ### Sync Drift Or Conflict
@@ -256,6 +275,6 @@ belay doctor
 Refresh generated assets and integrations:
 
 ```sh
-belay init --update-agents --install-skill codex
+belay init --update-agents --install-skill codex --install-skill claude
 belay doctor
 ```

@@ -1,3 +1,4 @@
 interface:
   display_name: "Codex Decision Review"
-  short_description: "Record linked belay decisions and implementation reviews."
+  short_description: "Review Decisions and completion evidence"
+  default_prompt: "Use $decision-review-workflow to review Decisions, Evidence, and completion against the Goal."
